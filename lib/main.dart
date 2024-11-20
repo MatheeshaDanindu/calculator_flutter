@@ -67,9 +67,7 @@ class _CalculatorHomeState extends State<CalculatorHome> {
       final expression = Expression.parse(_input);
       final evaluator = const ExpressionEvaluator();
       final result = evaluator.eval(expression, {});
-      setState(() {
-        _result = result.toString();
-      });
+
     } catch (e) {
       setState(() {
         _result = 'Error';
@@ -82,10 +80,17 @@ class _CalculatorHomeState extends State<CalculatorHome> {
       final expression = Expression.parse(_input);
       final evaluator = const ExpressionEvaluator();
       final result = evaluator.eval(expression, {});
-      setState(() {
-        _result = result.toString();
-        _input = ''; // Reset input after '='
-      });
+      if (_input.contains('/0')) {
+        setState(() {
+          _result = 'Undefined'; // Division by zero returns "Undefined"
+        });
+      } else {
+        final result = evaluator.eval(expression, {});
+        setState(() {
+          _result = result.toString();
+          _input = '';
+        });
+      }
     } catch (e) {
       setState(() {
         _result = 'Error';

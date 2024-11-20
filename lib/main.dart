@@ -33,17 +33,36 @@ class _CalculatorHomeState extends State<CalculatorHome> {
   void _onButtonPressed(String buttonText) {
     setState(() {
       if (buttonText == 'C') {
+        // Clear everything
         _input = '';
         _result = '0';
       } else if (buttonText == '=') {
+        // Calculate the result and lock it as the starting point for further calculations
         _calculateResult();
       } else {
-        _input += buttonText;
+        // Handle inputs after '='
+        if (_result != '0' && _input.isEmpty && !_isOperator(buttonText)) {
+          // Replace input with new number after '='
+          _input = buttonText;
+          _result = '0'; // Reset result to avoid confusion
+        } else if (_result != '0' && _input.isEmpty && _isOperator(buttonText)) {
+          // Continue calculation from the result if an operator is pressed
+          _input = _result + buttonText;
+          _result = '0';
+        } else {
+          // Append button text to input
+          _input += buttonText;
+
+          // Calculate intermediate result for dynamic updates
+          if (!_isOperator(buttonText)) {
+            _calculateIntermediateResult();
+          }
+        }
       }
     });
   }
 
-  void _calculateResult() {
+  void _calculateIntermediateResult() {
     try {
       final expression = Expression.parse(_input);
       final evaluator = const ExpressionEvaluator();
@@ -58,17 +77,33 @@ class _CalculatorHomeState extends State<CalculatorHome> {
     }
   }
 
+  void _calculateResult() {
+    try {
+      final expression = Expression.parse(_input);
+      final evaluator = const ExpressionEvaluator();
+      final result = evaluator.eval(expression, {});
+      setState(() {
+        _result = result.toString();
+        _input = ''; // Reset input after '='
+      });
+    } catch (e) {
+      setState(() {
+        _result = 'Error';
+      });
+    }
+  }
+
+  bool _isOperator(String buttonText) {
+    return buttonText == '+' || buttonText == '-' || buttonText == '*' || buttonText == '/';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Colors.black87,
-              Colors.black54,
-              Colors.tealAccent.shade700
-            ],
+            colors: [Colors.black87, Colors.black54, Colors.tealAccent.shade700],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -87,115 +122,37 @@ class _CalculatorHomeState extends State<CalculatorHome> {
 
   Widget _buildDisplay() {
     double screenWidth = MediaQuery.of(context).size.width;
-    double displayWidth = screenWidth * 0.95; // 90% of screen width
-    double minFontSize = 28.0; // Minimum font size before switching to scientific notation
-    double maxFontSizeInput = 36.0; // Maximum font size for input
-    double maxFontSizeResult = 48.0; // Maximum font size for result
+    double displayWidth = screenWidth * 0.9;
 
     return Center(
       child: Container(
-        width: displayWidth, // Set width to 90% of the screen
-        height: 150.0, // Fixed height
+        width: displayWidth,
+        height: 120.0,
         padding: EdgeInsets.all(16.0),
         decoration: BoxDecoration(
           color: Colors.grey.shade900,
           borderRadius: BorderRadius.circular(12.0),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black45,
-              offset: Offset(2, 2),
-              blurRadius: 6,
-            ),
-          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Input Display
-            LayoutBuilder(
-              builder: (context, constraints) {
-                double fontSize = maxFontSizeInput;
-                String displayText = _input.isEmpty ? '0' : _input;
-
-                // Adjust font size dynamically
-                while (_textWidth(displayText, fontSize) > constraints.maxWidth && fontSize > minFontSize) {
-                  fontSize -= 1.0; // Decrease font size
-                }
-
-                // Convert to scientific notation if minimum font size is reached
-                if (fontSize <= minFontSize && _textWidth(displayText, fontSize) > constraints.maxWidth) {
-                  displayText = _convertToScientific(displayText);
-                }
-
-                return Text(
-                  displayText,
-                  style: TextStyle(
-                    fontSize: fontSize,
-                    color: Colors.tealAccent,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  textAlign: TextAlign.right,
-                );
-              },
+            Text(
+              _input.isEmpty ? '0' : _input,
+              style: TextStyle(fontSize: 28.0, color: Colors.tealAccent),
+              textAlign: TextAlign.right,
             ),
-            SizedBox(height: 8.0), // Space between input and result
-            // Result Display
-            LayoutBuilder(
-              builder: (context, constraints) {
-                double fontSize = maxFontSizeResult;
-                String displayText = _result;
-
-                // Adjust font size dynamically
-                while (_textWidth(displayText, fontSize) > constraints.maxWidth && fontSize > minFontSize) {
-                  fontSize -= 1.0; // Decrease font size
-                }
-
-                // Convert to scientific notation if minimum font size is reached
-                if (fontSize <= minFontSize && _textWidth(displayText, fontSize) > constraints.maxWidth) {
-                  displayText = _convertToScientific(displayText);
-                }
-
-                return Text(
-                  displayText,
-                  style: TextStyle(
-                    fontSize: fontSize,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.right,
-                );
-              },
+            SizedBox(height: 8.0),
+            Text(
+              _result,
+              style: TextStyle(fontSize: 36.0, color: Colors.white, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.right,
             ),
           ],
         ),
       ),
     );
   }
-
-// Helper method to calculate text width
-  double _textWidth(String text, double fontSize) {
-    final textPainter = TextPainter(
-      text: TextSpan(text: text, style: TextStyle(fontSize: fontSize)),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    return textPainter.width;
-  }
-
-// Helper method to convert to scientific notation
-  String _convertToScientific(String text) {
-    try {
-      double value = double.parse(text);
-      return value.toStringAsExponential(3); // 3 significant figures
-    } catch (e) {
-      return 'Error';
-    }
-  }
-
-
-
-
-
 
   Widget _buildButtonGrid() {
     return Column(
@@ -212,17 +169,14 @@ class _CalculatorHomeState extends State<CalculatorHome> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: buttons.map((buttonText) {
-        return Expanded( // Ensure buttons fill available space
-          child: CalculatorButton(
-            text: buttonText,
-            onTap: () => _onButtonPressed(buttonText),
-          ),
+        return CalculatorButton(
+          text: buttonText,
+          onTap: () => _onButtonPressed(buttonText),
         );
       }).toList(),
     );
   }
 }
-
 
 class CalculatorButton extends StatelessWidget {
   final String text;
@@ -233,7 +187,7 @@ class CalculatorButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
-    double buttonSize = screenWidth * 0.18; // Buttons are 18% of screen width
+    double buttonSize = screenWidth * 0.2; // Buttons occupy 20% of screen width
 
     bool isOperator = text == '/' || text == '*' || text == '-' || text == '+';
     Color buttonColor = isOperator ? Colors.tealAccent : Colors.white;
@@ -243,9 +197,9 @@ class CalculatorButton extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: Duration(milliseconds: 200),
-        width: buttonSize,
-        height: buttonSize,
-        margin: EdgeInsets.all(8.0),
+        width: buttonSize, // Adjusted size dynamically
+        height: buttonSize, // Adjusted size dynamically
+        margin: EdgeInsets.all(screenWidth * 0.015), // Margin as a percentage of width
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: LinearGradient(
@@ -263,7 +217,7 @@ class CalculatorButton extends StatelessWidget {
           child: Text(
             text,
             style: TextStyle(
-              fontSize: buttonSize * 0.4, // Font size 40% of button size
+              fontSize: buttonSize * 0.35, // Font size as 35% of button size
               color: textColor,
               fontWeight: FontWeight.bold,
             ),

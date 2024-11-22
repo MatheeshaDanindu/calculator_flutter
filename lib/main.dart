@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:expressions/expressions.dart';
+import 'dart:math';
 
 void main() {
   runApp(CalculatorApp());
@@ -37,23 +38,56 @@ class _CalculatorHomeState extends State<CalculatorHome> {
         _input = '';
         _result = '0';
       } else if (buttonText == '=') {
-        // Calculate the result and lock it as the starting point for further calculations
+        // Calculate the final result
         _calculateResult();
+      } else if (buttonText == '.') {
+        // Add a decimal point only if valid
+        if (_input.isEmpty || _isOperator(_input[_input.length - 1])) {
+          _input += '0.';
+        } else {
+          List<String> splitInput = _input.split(RegExp(r'[+\-*/]'));
+          if (!splitInput.last.contains('.')) {
+            _input += '.';
+          }
+        }
+      } else if (buttonText == '√') {
+        // Calculate the square root of the last number
+        if (_input.isEmpty) {
+          double resultValue = double.tryParse(_result) ?? 0.0;
+          _result = resultValue >= 0 ? _sqrt(resultValue).toString() : 'Error'; // Error for negative roots
+        } else {
+          _calculateResult();
+          double resultValue = double.tryParse(_result) ?? 0.0;
+          _result = resultValue >= 0 ? _sqrt(resultValue).toString() : 'Error';
+          _input = '';
+        }
+      } else if (buttonText == '%') {
+        // Convert current number to percentage
+        if (_input.isEmpty) {
+          double resultValue = double.tryParse(_result) ?? 0.0;
+          _result = (resultValue / 100).toString();
+        } else {
+          List<String> splitInput = _input.split(RegExp(r'[+\-*/]'));
+          if (splitInput.isNotEmpty) {
+            double lastValue = double.tryParse(splitInput.last) ?? 0.0;
+            _input = _input.replaceFirst(
+              splitInput.last,
+              (lastValue / 100).toString(),
+            );
+            _calculateIntermediateResult();
+          }
+        }
       } else {
-        // Handle inputs after '='
+        // Handle normal button presses
         if (_result != '0' && _input.isEmpty && !_isOperator(buttonText)) {
-          // Replace input with new number after '='
           _input = buttonText;
-          _result = '0'; // Reset result to avoid confusion
+          _result = '0';
         } else if (_result != '0' && _input.isEmpty && _isOperator(buttonText)) {
-          // Continue calculation from the result if an operator is pressed
           _input = _result + buttonText;
           _result = '0';
         } else {
-          // Append button text to input
           _input += buttonText;
 
-          // Calculate intermediate result for dynamic updates
           if (!_isOperator(buttonText)) {
             _calculateIntermediateResult();
           }
@@ -61,6 +95,13 @@ class _CalculatorHomeState extends State<CalculatorHome> {
       }
     });
   }
+
+// Helper function to calculate square root
+  double _sqrt(double value) {
+    return value >= 0 ? sqrt(value) : double.nan; // Return NaN for negative numbers
+  }
+
+
 
   void _calculateIntermediateResult() {
     try {
@@ -77,18 +118,17 @@ class _CalculatorHomeState extends State<CalculatorHome> {
 
   void _calculateResult() {
     try {
-      final expression = Expression.parse(_input);
-      final evaluator = const ExpressionEvaluator();
-      final result = evaluator.eval(expression, {});
       if (_input.contains('/0')) {
         setState(() {
           _result = 'Undefined'; // Division by zero returns "Undefined"
         });
       } else {
+        final expression = Expression.parse(_input);
+        final evaluator = const ExpressionEvaluator();
         final result = evaluator.eval(expression, {});
         setState(() {
           _result = result.toString();
-          _input = '';
+          _input = ''; // Clear the input after calculation
         });
       }
     } catch (e) {
@@ -97,6 +137,7 @@ class _CalculatorHomeState extends State<CalculatorHome> {
       });
     }
   }
+
 
   bool _isOperator(String buttonText) {
     return buttonText == '+' || buttonText == '-' || buttonText == '*' || buttonText == '/';
@@ -162,13 +203,16 @@ class _CalculatorHomeState extends State<CalculatorHome> {
   Widget _buildButtonGrid() {
     return Column(
       children: [
-        _buildButtonRow(['7', '8', '9', '/']),
-        _buildButtonRow(['4', '5', '6', '*']),
-        _buildButtonRow(['1', '2', '3', '-']),
-        _buildButtonRow(['C', '0', '=', '+']),
+        _buildButtonRow(['C', '√', '%', '/']), // Added √ and %
+        _buildButtonRow(['7', '8', '9', '*']),
+        _buildButtonRow(['4', '5', '6', '-']),
+        _buildButtonRow(['1', '2', '3', '+']),
+        _buildButtonRow(['0', '.', '=', '']), // "=" is kept
       ],
     );
   }
+
+
 
   Widget _buildButtonRow(List<String> buttons) {
     return Row(

@@ -217,22 +217,23 @@ class _CalculatorHomeState extends State<CalculatorHome> {
   }
 
   Widget _buildDisplay() {
-    double screenWidth = MediaQuery
-        .of(context)
-        .size
-        .width;
+    double screenWidth = MediaQuery.of(context).size.width;
     double displayWidth = screenWidth * 0.94;
 
     return Center(
       child: Container(
         width: displayWidth,
-        height: 150.0,
-        padding: EdgeInsets.all(16.0),
+        padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
         decoration: BoxDecoration(
           color: Colors.grey.shade900,
           borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(
+            color: Colors.tealAccent, // Border color
+            width: 2.0,              // Border width
+          ),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min, // Adjust height dynamically
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -244,9 +245,11 @@ class _CalculatorHomeState extends State<CalculatorHome> {
             SizedBox(height: 8.0),
             Text(
               _result,
-              style: TextStyle(fontSize: 36.0,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 36.0,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
               textAlign: TextAlign.right,
             ),
           ],
@@ -254,6 +257,8 @@ class _CalculatorHomeState extends State<CalculatorHome> {
       ),
     );
   }
+
+
 
   Widget _buildButtonGrid() {
     return Column(
